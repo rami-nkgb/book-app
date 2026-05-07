@@ -1,0 +1,16 @@
+# ── Backend ──
+backend/venv/
+backend/__pycache__/
+backend/*.pyc
+backend/.env
+
+# ── Frontend (root level catch) ──
+frontend/node_modules/
+frontend/dist/
+
+# ── OS ──
+.DS_Store
+Thumbs.db
+
+mysql-layer.zip
+python/

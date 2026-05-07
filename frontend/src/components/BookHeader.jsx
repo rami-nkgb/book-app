@@ -21,8 +21,7 @@ function BookHeader({ onBookAdded }) {
                 <p className="welcome-msg">
                     Welcome to Personal Book Archive Page - a simple place to explore and manage your
                     favorite books. Browse the collection by title, author, or genre, and discover new
-                    reads anytime. Create an account to unlock full features, including borrowing or
-                    purchasing books, tracking your activity, and building your own personalized library.
+                    reads anytime. 
                 </p>
             </nav>
             <hr />

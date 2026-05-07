@@ -4,6 +4,8 @@ from flask_cors import CORS
 import mysql.connector
 import os
 from dotenv import load_dotenv
+from datetime import date, timedelta
+import bcrypt
 
 # load .env file
 load_dotenv()
@@ -18,6 +20,7 @@ db_config = {
     "password": os.getenv("DB_PASSWORD"),
     "database": os.getenv("DB_NAME")
 }
+
 
 def get_db():
     """Get a fresh DB connection (handles reconnects)"""
@@ -137,11 +140,14 @@ def delete_book(book_id):
 @app.route("/books/<int:book_id>/borrow", methods=["PUT"])
 def borrow_book(book_id):
     """Mark a book as borrowed"""
+    data = request.json or {}
+
     db = get_db()
     cursor = db.cursor(dictionary=True)
 
     # Check current status
-    cursor.execute("SELECT book_status FROM book_details WHERE book_id = %s", (book_id,))
+    cursor.execute(
+        "SELECT book_status FROM book_details WHERE book_id = %s", (book_id,))
     book = cursor.fetchone()
 
     if not book:
@@ -154,14 +160,197 @@ def borrow_book(book_id):
         db.close()
         return jsonify({"message": f"Book is currently {book['book_status']}"}), 400
 
+    # Get borrower name from request body
+    borrower_name = data.get("borrower_name", "Unknown")
+
+    # Calculate dates
+    borrowed_date = date.today()
+    due_date = borrowed_date + timedelta(days=14)
+
+    # Update book status in book details table
     cursor.execute(
         "UPDATE book_details SET book_status = 'borrowed' WHERE book_id = %s",
         (book_id,)
     )
+
+    # Insert into borrow_details
+    cursor.execute(
+        """INSERT INTO borrow_details
+        (book_id, borrower_name, borrowed_date, due_date)
+        VALUES (%s, %s, %s, %s)""",
+        (book_id, borrower_name, borrowed_date, due_date)
+    )
+
     db.commit()
     cursor.close()
     db.close()
-    return jsonify({"message": "Book borrowed successfully"})
+    return jsonify({"message": "Book borrowed successfully",
+                    "borrower_name": borrower_name,
+                    "borrowed_date": str(borrowed_date),
+                    "due_date": str(due_date)
+                    })
+
+
+@app.route("/books/<int:book_id>/return", methods=["PUT"])
+def return_book(book_id):
+    """Mark a book as returned"""
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+
+    # Check current status
+    cursor.execute(
+        "SELECT book_status FROM book_details WHERE book_id = %s", (book_id,)
+    )
+    book = cursor.fetchone()
+
+    if not book:
+        cursor.close()
+        db.close()
+        return jsonify({"message": "Book not found"}), 404
+
+    if book["book_status"] != "borrowed":
+        cursor.close()
+        db.close()
+        return jsonify({"message": "Book is not currently borrowed"}), 400
+
+    # Update book status back to available
+    cursor.execute(
+        "UPDATE book_details SET book_status = 'available' where book_id = %s",
+        (book_id,)
+    )
+
+    # Update borrow_details with return date
+    cursor.execute(
+        """UPDATE borrow_details SET return_date = %s 
+        WHERE book_id = %s AND return_date IS NULL""",
+        (date.today(), book_id)
+    )
+
+    db.commit()
+    cursor.close()
+    db.close()
+    return jsonify({"message": "Book returned successfully"})
+
+
+@app.route("/signup", methods=["POST"])
+def signup():
+    data = request.json
+    username = data.get("username")
+    password = data.get("password")
+
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+
+    if not username or not password:
+        return jsonify({
+            "message": "Username and password are required"
+        }), 400
+
+    # Step 1: Check if username already exists
+    cursor.execute(
+        "SELECT * FROM user_details WHERE user_name = %s",
+        (username,)
+    )
+    user = cursor.fetchone()
+
+    if user:
+        cursor.close()
+        db.close()
+        return jsonify({
+            "message": "Username already in use, Please select different username"
+        }), 400
+
+    # Step 2: Hash the password
+    hashed_password = bcrypt.hashpw(
+        password.encode("utf-8"),  # convert string to bytes
+        bcrypt.gensalt()           # generate random salt
+    )
+
+    # Step 3: Insert new user details into Users table
+    cursor.execute(
+        """INSERT INTO user_details
+        (user_name, password, created_date)
+        VALUES (%s, %s, CURDATE())""",
+        (username, hashed_password.decode("utf-8"))
+    )
+    db.commit()
+
+    cursor.close()
+    db.close()
+
+    # Step 4: Return success
+    return jsonify({
+        "message": "User details created successfully. Please proceed with Login"
+    }), 201
+
+
+@app.route("/login", methods=["POST"])
+def login():
+
+    try:
+
+        data = request.json
+
+        username = data.get("username")
+        password = data.get("password")
+
+        # validation
+
+        if not username or not password:
+            return jsonify({
+                "message": "Username and password are required"
+            }), 400
+
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+
+        # Step 1 :Find user
+        cursor.execute(
+            "SELECT * FROM user_details WHERE user_name = %s",
+            (username,)
+        )
+
+        user = cursor.fetchone()
+
+        # Step 2: User not found
+        if not user:
+            return jsonify({
+                "message": "Invalid username"
+            }), 401
+
+        # Step 3: Compare password
+        stored_password = user["password"]
+
+        password_match = bcrypt.checkpw(
+            password.encode("utf-8"),
+            stored_password.encode("utf-8")
+        )
+
+        # Step 4: Invalid password
+        if not password_match:
+            return jsonify({
+                "message": "Invalid password"
+            }), 401
+
+        # Step 5: Success
+        return jsonify({
+            "message": "Login successful",
+            "username": username
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            "message": "Database/Login error",
+            "error": str(e)
+        }), 500
+
+    finally:
+        # Close DB connection safely
+        if 'cursor' in locals():
+            cursor.close()
+
+        if 'db' in locals():
+            db.close()
 
 
 if __name__ == "__main__":

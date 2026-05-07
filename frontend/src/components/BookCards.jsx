@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
+import BorrowModal from "./BorrowModal";
 
 function BookCards({ searchFilters }) {
     const [books, setBooks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [showBorrowModal, setShowBorrowModal] = useState(false);
+    const [selectedBook, setSelectedBook] = useState(null);
 
     // Fetch books from Flask API on component mount
     useEffect(() => {
@@ -41,23 +44,85 @@ function BookCards({ searchFilters }) {
         }
     };
 
+    //handleBorrow function - need to write this function
     const handleBorrow = async (bookId, bookTitle) => {
+
         try {
-            const response = await fetch(`http://127.0.0.1:5000/books/${bookId}/borrow`, {
-                method: "PUT"
-            });
+
+            const borrowerName =
+                localStorage.getItem("username") || "Guest";
+
+            const response = await fetch(`http://127.0.0.1:5000/books/${bookId}/borrow`,
+                {
+                    method: "PUT",
+
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        borrower_name: borrowerName
+                    })
+                }
+            );
+
             const data = await response.json();
+
             if (!response.ok) {
                 alert(data.message);
                 return;
             }
-            alert(`"${bookTitle}" has been borrowed!`);
-            fetchBooks(); // Refresh list to show updated status
-        } catch (err) {
-            alert("Failed to borrow book. Please try again.");
-            console.error(err);
+
+            alert(
+                `${bookTitle} borrowed successfully\nDue Date: ${data.due_date}`
+            );
+
+            // Refresh latest books from DB
+            fetchBooks();
+
+        } catch (error) {
+            console.error("Borrow error:", error);
+            alert("Error borrowing book");
         }
     };
+
+
+    //handleReturn function 
+    const handleReturn = async (bookId, bookTitle) => {
+
+        try {
+
+            const response = await fetch(
+                `http://127.0.0.1:5000/books/${bookId}/return`,
+                {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json"
+                    }
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                alert(data.message);
+                return;
+            }
+
+            alert(`${bookTitle} returned successfully`);
+
+            // Update UI book list
+            if (!response.ok) throw new Error("Return failed");
+                // Refresh the list after return
+                fetchBooks();
+
+
+        } catch (error) {
+            console.error("Return book error:", error);
+            alert("Error returning book");
+        }
+    };
+
 
     // Filter books based on search inputs passed from parent
     const filteredBooks = books.filter((book) => {
@@ -102,13 +167,22 @@ function BookCards({ searchFilters }) {
                             {book.book_status}
                         </span>
                         <div className="button-actions">
-                            <button
+                            {book.book_status === "available" ? (
+                                <button
                                 className="bc-action-Borrow"
                                 onClick={() => handleBorrow(book.book_id, book.book_title)}
-                                disabled={book.book_status !== "available"}
-                            >
+                                >
                                 Borrow
-                            </button>
+                                </button>
+                            ) : book.book_status === "borrowed" ? (
+                                <button
+                                className="bc-action-Return"
+                                onClick={() => handleReturn(book.book_id, book.book_title)}
+                                >
+                                Return
+                                </button>                                
+                            ) :null
+                            }
                             <button
                                 className="bc-action-Delete"
                                 onClick={() => handleDelete(book.book_id, book.book_title)}
