@@ -6,6 +6,7 @@ import os
 from dotenv import load_dotenv
 from datetime import date, timedelta
 import bcrypt
+import hashlib
 
 # load .env file
 load_dotenv()
@@ -26,8 +27,19 @@ def get_db():
     """Get a fresh DB connection (handles reconnects)"""
     return mysql.connector.connect(**db_config)
 
+# Password encryption helper function
+
+
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
+
+
+def verify_password(password, hashed):
+    return hashlib.sha256(password.encode()).hexdigest() == hashed
 
 # helper function - get or create author id for new book add functionality
+
+
 def get_or_create_author(cursor, author_data):
     # step1: check if author already exists in author db (by name)
     cursor.execute(
@@ -262,16 +274,16 @@ def signup():
 
     # Step 2: Hash the password
     hashed_password = bcrypt.hashpw(
-        password.encode("utf-8"),  # convert string to bytes
-        bcrypt.gensalt()           # generate random salt
-    )
+        password.encode("utf-8"),
+        bcrypt.gensalt()
+    ).decode("utf-8")
 
     # Step 3: Insert new user details into Users table
     cursor.execute(
         """INSERT INTO user_details
         (user_name, password, created_date)
         VALUES (%s, %s, CURDATE())""",
-        (username, hashed_password.decode("utf-8"))
+        (username, hashed_password)
     )
     db.commit()
 

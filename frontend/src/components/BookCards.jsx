@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import BorrowModal from "./BorrowModal";
 
 function BookCards({ searchFilters }) {
     const [books, setBooks] = useState([]);
@@ -74,7 +73,7 @@ function BookCards({ searchFilters }) {
             }
 
             alert(
-                `${bookTitle} borrowed successfully\nDue Date: ${data.due_date}`
+                `${bookTitle} book borrowed successfully\nDue Date: ${data.due_date}`
             );
 
             // Refresh latest books from DB
@@ -103,20 +102,17 @@ function BookCards({ searchFilters }) {
             );
 
             const data = await response.json();
-
             if (!response.ok) {
                 alert(data.message);
                 return;
             }
 
-            alert(`${bookTitle} returned successfully`);
+            alert(`${bookTitle} book returned successfully`);
 
             // Update UI book list
             if (!response.ok) throw new Error("Return failed");
                 // Refresh the list after return
                 fetchBooks();
-
-
         } catch (error) {
             console.error("Return book error:", error);
             alert("Error returning book");
@@ -168,12 +164,17 @@ function BookCards({ searchFilters }) {
                         </span>
                         <div className="button-actions">
                             {book.book_status === "available" ? (
-                                <button
-                                className="bc-action-Borrow"
-                                onClick={() => handleBorrow(book.book_id, book.book_title)}
+                                <><button
+                                    className="bc-action-Borrow"
+                                    onClick={() => handleBorrow(book.book_id, book.book_title)}
                                 >
-                                Borrow
-                                </button>
+                                    Borrow
+                                </button><button
+                                    className="bc-action-Delete"
+                                    onClick={() => handleDelete(book.book_id, book.book_title)}
+                                >
+                                Delete
+                                </button></>
                             ) : book.book_status === "borrowed" ? (
                                 <button
                                 className="bc-action-Return"
@@ -183,12 +184,7 @@ function BookCards({ searchFilters }) {
                                 </button>                                
                             ) :null
                             }
-                            <button
-                                className="bc-action-Delete"
-                                onClick={() => handleDelete(book.book_id, book.book_title)}
-                            >
-                                Delete
-                            </button>
+                            
                         </div>
                     </div>
                 ))}

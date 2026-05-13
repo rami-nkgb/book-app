@@ -1,12 +1,16 @@
 import { useState, useCallback } from "react";
 
-import BookHeader from "./Components/BookHeader.jsx";
-import BookFooter from "./Components/BookFooter.jsx";
-import BookCards from "./Components/BookCards.jsx";
-import BookSearch from "./Components/BookSearch.jsx";
-import Login from "./Components/Login.jsx";
+import BookHeader from "./components/BookHeader.jsx";
+import BookFooter from "./components/BookFooter.jsx";
+import BookCards from "./components/BookCards.jsx";
+import BookSearch from "./components/BookSearch.jsx";
+import Login from "./components/Login.jsx";
+import Signup from "./components/Signup.jsx";
 
 function App() {
+
+    //Signup
+    const [showSignup,setShowSignup] = useState(false)
 
     // Logged in user
     const [loggedInUser, setLoggedInUser] = useState(
@@ -37,34 +41,36 @@ function App() {
 
     // SHOW LOGIN PAGE
     if (!loggedInUser) {
+        if (showSignup) {
+
+            return (
+                <Signup
+                    onSignupSuccess={setLoggedInUser}
+                    onShowLogin={() => setShowSignup(false)}
+                />
+            )
+        }
 
         return (
             <Login
                 onLoginSuccess={setLoggedInUser}
+                onShowSignup={() => setShowSignup(true)}
             />
-        );
+        )
     }
-
     // SHOW HOME PAGE
     return (
         <>
 
             <BookHeader
                 onBookAdded={handleBookAdded}
+                onLogout={handleLogout}
             />
 
             <div className="welcome-msg">
-
-                Welcome, {loggedInUser}
-
-                <button
-                    className="cancel-btn"
-                    style={{ marginLeft: "15px" }}
-                    onClick={handleLogout}
-                >
-                    Logout
-                </button>
-
+                Hello {loggedInUser}, Welcome to Personal Book Archive Page - a simple place to explore and manage your
+                favorite books. Browse the collection by title, author, or genre, and discover new
+                reads anytime.
             </div>
 
             <BookSearch

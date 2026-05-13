@@ -1,16 +1,21 @@
-# ── Backend ──
+﻿# -- Backend --
 backend/venv/
 backend/__pycache__/
 backend/*.pyc
 backend/.env
 
-# ── Frontend (root level catch) ──
+# -- Frontend --
 frontend/node_modules/
 frontend/dist/
 
-# ── OS ──
+# -- OS --
 .DS_Store
 Thumbs.db
 
+# -- Lambda layers --
 mysql-layer.zip
+bcrypt-layer-v2.zip
+bcrypt-linux-layer.zip
 python/
+python-bcrypt/
+python-linux/

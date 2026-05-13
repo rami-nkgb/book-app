@@ -1,30 +1,29 @@
 import { useState } from "react";
 
-function Login({ onLoginSuccess, onShowSignup }) {
+function Signup({onSignupSuccess, onShowLogin}){
+    const [username, setUsername] = useState("")
+    const [password, setPassword] = useState("")
 
-    const [username, setUsername] = useState("");
-    const [password, setPassword] = useState("");
+    const [error, setError] = useState("")
+    const [success, setSuccess] = useState("")
+    const [loading, setLoading] = useState(false)
 
-    const [error, setError] = useState("");
-    const [loading, setLoading] = useState(false);
+    const handleSignup = async (e) => {
+        e.preventDefault()
 
-    const handleLogin = async (e) => {
-
-        e.preventDefault();
-
-        setError("");
+        setError("")
+        setSuccess("")
 
         // Validation
         if (!username || !password) {
-            setError("Username and password are required");
-            return;
+            setError("Username and password are required")
+            return
         }
+    
+            try {
+            setLoading(true)
 
-        try {
-
-            setLoading(true);
-            const response = await fetch(
-                "http://127.0.0.1:5000/login",
+            const response = await fetch("http://127.0.0.1:5000/signup",
                 {
                     method: "POST",
                     headers: {
@@ -35,45 +34,47 @@ function Login({ onLoginSuccess, onShowSignup }) {
                         password
                     })
                 }
-            );
+            )
 
-            const data = await response.json();
-
+            const data = await response.json()
             if (!response.ok) {
-                setError(data.message);
-                return;
+                setError(data.message)
+                return
             }
 
-            // Save login locally
-            localStorage.setItem("username", data.username);
+            setSuccess(data.message)
 
-            // Notify parent component
-            onLoginSuccess(data.username);
+            // Optional auto-login
+            localStorage.setItem("username", username)
 
-        } catch (error) {
-            console.error("Login error:", error);
-            setError("Unable to connect to server");
-        } finally {
-
-            setLoading(false);
+            // Redirect to home page
+            onSignupSuccess(username)
+        } 
+        catch (error) {
+            console.error("Signup error:", error)
+            setError("Unable to connect to server")
         }
-    };
+        finally {
+            setLoading(false)
+        }
+    }
 
     return (
         <div className="modal-overlay">
             <div className="modal-box">
-                <h2>Login</h2>
-
+                <h2>Signup</h2>
                 {error && (
                     <div className="modal-error">
                         {error}
                     </div>
                 )}
+                {success && (
+                    <div className="status-msg">
+                        {success}
+                    </div>
+                )}
 
-                <form
-                    className="modal-form"
-                    onSubmit={handleLogin}
-                >
+                <form className="modal-form" onSubmit={handleSignup}>
 
                     <label>Username</label>
 
@@ -83,7 +84,7 @@ function Login({ onLoginSuccess, onShowSignup }) {
                         onChange={(e) =>
                             setUsername(e.target.value)
                         }
-                        placeholder="Enter username"
+                        placeholder="Choose username"
                     />
 
                     <label>Password</label>
@@ -94,32 +95,30 @@ function Login({ onLoginSuccess, onShowSignup }) {
                         onChange={(e) =>
                             setPassword(e.target.value)
                         }
-                        placeholder="Enter password"
+                        placeholder="Choose password"
                     />
 
                     <div className="modal-buttons">
-
                         <button
                             type="submit"
                             className="add-btn"
                             disabled={loading}
                         >
-                            {loading ? "Logging in..." : "Login"}
+                            {loading ? "Creating..." : "Signup"}
                         </button>
 
                         <button
                             type="button"
                             className="cancel-btn"
-                            onClick={onShowSignup}
+                            onClick={onShowLogin}
                         >
-                            Signup
-
+                            Back to Login
                         </button>
                     </div>
                 </form>
             </div>
         </div>
-    );
+    )
 }
 
-export default Login;
+export default Signup;
